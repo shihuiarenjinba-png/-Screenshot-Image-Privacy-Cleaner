@@ -160,8 +160,11 @@ class App:
 
 
 def main():
+    from i18n import install_bilingual_ui
+
     root = Tk()
     App(root)
+    install_bilingual_ui(root)
     root.mainloop()
 
 
