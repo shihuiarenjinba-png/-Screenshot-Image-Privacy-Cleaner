@@ -49,6 +49,9 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
             draw = ImageDraw.Draw(im)
             for box in rects:
                 draw.rectangle(box, fill=(0, 0, 0, 255) if im.mode == "RGBA" else (0, 0, 0))
+        # Pillow carries ICC and other source metadata in Image.info across
+        # transformations. Clear it explicitly before every output encoder.
+        im.info.clear()
         if flatten_png:
             out = output_dir / f"{path.stem}_clean.png"
             if im.mode == "RGBA":

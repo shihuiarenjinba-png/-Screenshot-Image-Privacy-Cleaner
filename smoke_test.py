@@ -27,4 +27,9 @@ with tempfile.TemporaryDirectory() as tmp:
         pixel = cleaned.convert("RGB").getpixel((10, 10))
         assert pixel == (0, 0, 0)
 
+    jpg_out = clean_image(src, root / "jpeg-out", [], False)
+    with Image.open(jpg_out) as cleaned_jpg:
+        assert len(cleaned_jpg.getexif()) == 0
+        assert "icc_profile" not in cleaned_jpg.info
+
 print("Image Privacy Cleaner smoke test: OK")
