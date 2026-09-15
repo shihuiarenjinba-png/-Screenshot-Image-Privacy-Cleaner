@@ -32,4 +32,31 @@ with tempfile.TemporaryDirectory() as tmp:
         assert len(cleaned_jpg.getexif()) == 0
         assert "icc_profile" not in cleaned_jpg.info
 
+    tiff = root / "日本語.tiff"
+    Image.new("RGB", (40, 40), "white").save(tiff, format="TIFF", icc_profile=b"private-icc")
+    tiff_info = inspect_image(tiff)
+    assert tiff_info["icc"] is True
+    tiff_out = clean_image(tiff, root / "tiff-out", [], False)
+    with Image.open(tiff_out) as cleaned_tiff:
+        cleaned_tiff.load()
+        assert "icc_profile" not in cleaned_tiff.info
+
+    corrupt = root / "corrupt.png"
+    corrupt.write_bytes(b"\x89PNG\r\n\x1a\ntruncated")
+    try:
+        inspect_image(corrupt)
+    except Exception:
+        pass
+    else:
+        raise AssertionError("Corrupt image must be rejected")
+
+    unsupported = root / "fake.gif"
+    Image.new("RGB", (16, 16), "white").save(unsupported, format="GIF")
+    try:
+        inspect_image(unsupported)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Unsupported image extension must be rejected")
+
 print("Image Privacy Cleaner smoke test: OK")
