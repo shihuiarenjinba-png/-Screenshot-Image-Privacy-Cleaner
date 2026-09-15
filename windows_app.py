@@ -8,6 +8,18 @@ from PIL import Image, ImageDraw, ImageOps
 SUPPORTED = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
 
 
+def same_path(a: Path, b: Path) -> bool:
+    try:
+        return a.resolve() == b.resolve()
+    except OSError:
+        return a.absolute() == b.absolute()
+
+
+def ensure_supported(path: Path) -> None:
+    if path.suffix.lower() not in SUPPORTED:
+        raise ValueError(f"Unsupported image: {path.name}")
+
+
 def parse_rectangles(text: str) -> list[tuple[int, int, int, int]]:
     rects = []
     if not text.strip():
@@ -24,11 +36,13 @@ def parse_rectangles(text: str) -> list[tuple[int, int, int, int]]:
 
 
 def inspect_image(path: Path) -> dict:
+    ensure_supported(path)
+    with Image.open(path) as probe:
+        probe.verify()
     with Image.open(path) as im:
+        im.load()
         exif = im.getexif()
-        gps = False
-        if exif:
-            gps = 34853 in exif
+        gps = bool(exif and 34853 in exif)
         return {
             "format": im.format,
             "size": im.size,
@@ -40,8 +54,10 @@ def inspect_image(path: Path) -> dict:
 
 
 def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, int]], flatten_png: bool) -> Path:
+    ensure_supported(path)
     output_dir.mkdir(parents=True, exist_ok=True)
     with Image.open(path) as source:
+        source.load()
         im = ImageOps.exif_transpose(source)
         if im.mode not in ("RGB", "RGBA"):
             im = im.convert("RGBA" if "A" in im.mode else "RGB")
@@ -49,11 +65,11 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
             draw = ImageDraw.Draw(im)
             for box in rects:
                 draw.rectangle(box, fill=(0, 0, 0, 255) if im.mode == "RGBA" else (0, 0, 0))
-        # Pillow carries ICC and other source metadata in Image.info across
-        # transformations. Clear it explicitly before every output encoder.
         im.info.clear()
         if flatten_png:
             out = output_dir / f"{path.stem}_clean.png"
+            if same_path(path, out):
+                raise ValueError("Refusing to overwrite the original image.")
             if im.mode == "RGBA":
                 background = Image.new("RGB", im.size, "white")
                 background.paste(im, mask=im.getchannel("A"))
@@ -64,14 +80,18 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
             return out
         ext = path.suffix.lower()
         out = output_dir / f"{path.stem}_clean{ext}"
+        if same_path(path, out):
+            raise ValueError("Refusing to overwrite the original image.")
         if ext in {".jpg", ".jpeg"}:
             im.convert("RGB").save(out, format="JPEG", quality=95, optimize=True)
         elif ext == ".webp":
             im.save(out, format="WEBP", quality=95, method=6)
         elif ext == ".png":
             im.save(out, format="PNG", optimize=True)
+        elif ext == ".bmp":
+            im.convert("RGB").save(out, format="BMP")
         else:
-            im.save(out)
+            im.save(out, format="TIFF", compression="tiff_deflate")
         return out
 
 
