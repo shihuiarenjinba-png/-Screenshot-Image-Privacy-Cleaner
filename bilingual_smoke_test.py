@@ -1,15 +1,14 @@
-from i18n import get_language, set_language, translate
+import i18n
 
-original = get_language()
+original = getattr(i18n, "get_language", lambda: getattr(i18n, "_LANGUAGE", "en"))()
 try:
-    set_language("ja")
-    assert translate("Add files") == "ファイルを追加"
-    assert translate("Scan") == "スキャン"
-    assert translate("Unsupported format: .abc").startswith("未対応形式")
-    set_language("en")
-    assert translate("Add files") == "Add files"
-    assert translate("Scan") == "Scan"
+    i18n.set_language("ja")
+    assert i18n.translate("Add images") == "画像を追加"
+    assert i18n.translate("Clean & export") == "クリーニングして出力"
+    i18n.set_language("en")
+    assert i18n.translate("Add images") == "Add images"
+    assert i18n.translate("Clean & export") == "Clean & export"
 finally:
-    set_language(original)
+    i18n.set_language(original)
 
-print("Bilingual UI smoke test: OK")
+print("Image Privacy Cleaner bilingual UI smoke test: OK")
