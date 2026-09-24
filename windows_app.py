@@ -7,6 +7,15 @@ from PIL import Image, ImageDraw, ImageOps
 
 SUPPORTED = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
 
+# Structural TIFF fields describe how pixels are encoded. They are required for a
+# readable TIFF and are not privacy metadata by themselves. Unknown and content-
+# bearing fields remain flagged so the inspection fails toward manual review.
+TIFF_STRUCTURAL_TAGS = {
+    254, 256, 257, 258, 259, 262, 266, 273, 277, 278, 279,
+    282, 283, 284, 286, 287, 292, 293, 296, 317, 320, 322,
+    323, 324, 325, 338, 339,
+}
+
 
 def same_path(a: Path, b: Path) -> bool:
     try:
@@ -43,11 +52,17 @@ def inspect_image(path: Path) -> dict:
         im.load()
         exif = im.getexif()
         gps = bool(exif and 34853 in exif)
+        raw_exif_tags = set(exif.keys()) if exif else set()
+        structural_tags = raw_exif_tags & TIFF_STRUCTURAL_TAGS if im.format == "TIFF" else set()
+        separately_reported_tags = {34675} if "icc_profile" in im.info else set()
+        privacy_tags = raw_exif_tags - structural_tags - separately_reported_tags
         return {
             "format": im.format,
             "size": im.size,
             "mode": im.mode,
-            "exif_tags": len(exif) if exif else 0,
+            "exif_tags": len(privacy_tags),
+            "raw_exif_tags": len(raw_exif_tags),
+            "structural_tags": len(structural_tags),
             "gps": gps,
             "icc": "icc_profile" in im.info,
         }
@@ -61,11 +76,12 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
         im = ImageOps.exif_transpose(source)
         if im.mode not in ("RGB", "RGBA"):
             im = im.convert("RGBA" if "A" in im.mode else "RGB")
+        # Rebuild from pixels so no EXIF/TIFF tag object survives the export.
+        im = Image.frombytes(im.mode, im.size, im.tobytes())
         if rects:
             draw = ImageDraw.Draw(im)
             for box in rects:
                 draw.rectangle(box, fill=(0, 0, 0, 255) if im.mode == "RGBA" else (0, 0, 0))
-        im.info.clear()
         if flatten_png:
             out = output_dir / f"{path.stem}_clean.png"
             if same_path(path, out):

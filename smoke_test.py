@@ -1,6 +1,6 @@
 from pathlib import Path
 import tempfile
-from PIL import Image
+from PIL import Image, ImageChops, ImageDraw, ImageOps, ImageStat
 
 from windows_app import inspect_image, clean_image
 
@@ -36,10 +36,49 @@ with tempfile.TemporaryDirectory() as tmp:
     Image.new("RGB", (40, 40), "white").save(tiff, format="TIFF", icc_profile=b"private-icc")
     tiff_info = inspect_image(tiff)
     assert tiff_info["icc"] is True
+    assert tiff_info["raw_exif_tags"] > 0
+    assert tiff_info["structural_tags"] > 0
+    assert tiff_info["exif_tags"] == 0, tiff_info
     tiff_out = clean_image(tiff, root / "tiff-out", [], False)
     with Image.open(tiff_out) as cleaned_tiff:
         cleaned_tiff.load()
         assert "icc_profile" not in cleaned_tiff.info
+    cleaned_tiff_info = inspect_image(tiff_out)
+    assert cleaned_tiff_info["exif_tags"] == 0, cleaned_tiff_info
+
+    tagged_tiff = root / "tagged.tiff"
+    tiff_metadata = Image.Exif()
+    tiff_metadata[270] = "private description"
+    Image.new("RGB", (24, 16), "black").save(tagged_tiff, format="TIFF", exif=tiff_metadata)
+    tagged_info = inspect_image(tagged_tiff)
+    assert tagged_info["exif_tags"] >= 1, tagged_info
+
+    oriented = root / "oriented.jpg"
+    asymmetric = Image.new("RGB", (80, 40), "white")
+    draw = ImageDraw.Draw(asymmetric)
+    draw.rectangle((0, 0, 25, 15), fill="red")
+    draw.rectangle((55, 20, 79, 39), fill="blue")
+    orientation_exif = Image.Exif()
+    orientation_exif[274] = 6
+    asymmetric.save(oriented, format="JPEG", quality=98, exif=orientation_exif)
+    with Image.open(oriented) as original:
+        original.load()
+        expected_visual = ImageOps.exif_transpose(original).convert("RGB")
+    oriented_out = clean_image(oriented, root / "oriented-out", [], False)
+    with Image.open(oriented_out) as cleaned_oriented:
+        cleaned_oriented.load()
+        actual_visual = cleaned_oriented.convert("RGB")
+        assert actual_visual.size == expected_visual.size == (40, 80)
+        difference = ImageChops.difference(expected_visual, actual_visual)
+        mean_difference = sum(ImageStat.Stat(difference).mean) / 3
+        assert mean_difference < 3.0, mean_difference
+        assert len(cleaned_oriented.getexif()) == 0
+
+    redacted_out = clean_image(oriented, root / "redacted-out", [(2, 3, 12, 13)], True)
+    with Image.open(redacted_out) as redacted:
+        redacted.load()
+        assert redacted.size == expected_visual.size
+        assert redacted.convert("RGB").getpixel((5, 5)) == (0, 0, 0)
 
     corrupt = root / "corrupt.png"
     corrupt.write_bytes(b"\x89PNG\r\n\x1a\ntruncated")

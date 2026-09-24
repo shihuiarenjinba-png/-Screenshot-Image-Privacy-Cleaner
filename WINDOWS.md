@@ -5,11 +5,15 @@ Windows-only local image privacy tool.
 ## Implemented
 
 - JPG/JPEG/PNG/WEBP/BMP/TIFF intake
-- EXIF tag count, GPS flag and ICC-profile inspection
+- Privacy/content-bearing EXIF tag count, GPS flag and ICC-profile inspection. Required TIFF pixel-layout tags are reported separately as structural tags and do not trigger an EXIF privacy warning.
 - EXIF orientation normalization
 - Metadata-stripped re-encoding
 - Optional PNG flattening
 - Optional manual black redaction by pixel rectangles (`x,y,width,height; ...`)
+
+## Orientation and redaction coordinates
+
+The cleaner applies EXIF orientation to the pixels first and then removes the orientation tag. The cleaned file therefore preserves the image's displayed orientation; its raw width/height may swap for 90-degree orientations. Redaction rectangles are interpreted in this normalized, displayed coordinate space. Tests compare the cleaned pixels against `exif_transpose` output rather than against the unrotated raw pixel matrix.
 
 No image content is uploaded anywhere by this implementation.
 
