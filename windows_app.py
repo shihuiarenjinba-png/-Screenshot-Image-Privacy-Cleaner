@@ -141,7 +141,7 @@ class App:
         self.listbox.pack(fill=BOTH, expand=True, padx=12, pady=12)
 
     def add_files(self):
-        paths = filedialog.askopenfilenames(title="Select images")
+        paths = filedialog.askopenfilenames(parent=self.root, title="Select images")
         for p in paths:
             path = Path(p)
             if path.suffix.lower() not in SUPPORTED:
@@ -182,7 +182,7 @@ class App:
         except Exception as exc:
             messagebox.showerror("Invalid rectangles", str(exc))
             return
-        folder = filedialog.askdirectory(title="Choose output folder")
+        folder = filedialog.askdirectory(parent=self.root, title="Choose output folder")
         if not folder:
             return
         ok, errors = 0, []
