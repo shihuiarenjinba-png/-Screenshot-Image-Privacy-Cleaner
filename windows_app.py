@@ -68,6 +68,19 @@ def inspect_image(path: Path) -> dict:
         }
 
 
+def save_new_image(image: Image.Image, path: Path, format_name: str, **options) -> None:
+    """Create a new output exclusively; never replace an earlier export."""
+    created = False
+    try:
+        with path.open("xb") as output:
+            created = True
+            image.save(output, format=format_name, **options)
+    except BaseException:
+        if created:
+            path.unlink(missing_ok=True)
+        raise
+
+
 def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, int]], flatten_png: bool) -> Path:
     ensure_supported(path)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -91,22 +104,22 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
                 im = background
             else:
                 im = im.convert("RGB")
-            im.save(out, format="PNG", optimize=True)
+            save_new_image(im, out, "PNG", optimize=True)
             return out
         ext = path.suffix.lower()
         out = output_dir / f"{path.stem}_clean{ext}"
         if same_path(path, out):
             raise ValueError("Refusing to overwrite the original image.")
         if ext in {".jpg", ".jpeg"}:
-            im.convert("RGB").save(out, format="JPEG", quality=95, optimize=True)
+            save_new_image(im.convert("RGB"), out, "JPEG", quality=95, optimize=True)
         elif ext == ".webp":
-            im.save(out, format="WEBP", quality=95, method=6)
+            save_new_image(im, out, "WEBP", quality=95, method=6)
         elif ext == ".png":
             im.save(out, format="PNG", optimize=True)
         elif ext == ".bmp":
-            im.convert("RGB").save(out, format="BMP")
+            save_new_image(im.convert("RGB"), out, "BMP")
         else:
-            im.save(out, format="TIFF", compression="tiff_deflate")
+            save_new_image(im, out, "TIFF", compression="tiff_deflate")
         return out
 
 
