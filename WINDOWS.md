@@ -37,4 +37,4 @@ Build output: `dist\ImagePrivacyCleaner.exe` (portable, **not** a Microsoft Stor
 
 ## Store release gate
 
-**HOLD**. Portable EXE is a developer candidate only. Need Windows 10/11 manual GUI/DPI and end-to-end tests, verified MSIX identity and manifest, install/update/uninstall/WACK, complete commercial rights and third-party notices, signing/distribution method, screenshots, accurate privacy statements and product/bundle integration review.
+**HOLD**. Portable EXE is a developer candidate only. Need Windows 10/11 manual GUI/DPI and end-to-end tests, verified MSIX identity and manifest, install/update/uninstall/optional WACK check and Store certification, complete commercial rights and third-party notices, signing/distribution method, screenshots, accurate privacy statements and product/bundle integration review.
