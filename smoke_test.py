@@ -2,7 +2,7 @@ from pathlib import Path
 import tempfile
 from PIL import Image
 
-from windows_app import inspect_image, clean_image
+from windows_app import inspect_image, clean_image, scale_preview_rectangle
 
 with tempfile.TemporaryDirectory() as tmp:
     root = Path(tmp)
@@ -26,6 +26,27 @@ with tempfile.TemporaryDirectory() as tmp:
         assert "icc_profile" not in cleaned.info
         pixel = cleaned.convert("RGB").getpixel((10, 10))
         assert pixel == (0, 0, 0)
+
+    # Drag mapping must honor source scale, reverse dragging and clipping.
+    assert scale_preview_rectangle((10, 20), (30, 50), (100, 100), (400, 200)) == (40, 40, 120, 100)
+    assert scale_preview_rectangle((30, 50), (10, 20), (100, 100), (400, 200)) == (40, 40, 120, 100)
+    assert scale_preview_rectangle((-10, -10), (1000, 1000), (100, 100), (400, 200)) == (0, 0, 400, 200)
+    try:
+        scale_preview_rectangle((10, 10), (10, 20), (100, 100), (400, 200))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Zero-area drag must be refused")
+
+    # The user's previous cleaned export must never be silently replaced.
+    original_export_bytes = out.read_bytes()
+    try:
+        clean_image(src, root / "out", [(0, 0, 5, 5)], True)
+    except FileExistsError:
+        pass
+    else:
+        raise AssertionError("Existing cleaned output must not be overwritten")
+    assert out.read_bytes() == original_export_bytes
 
     jpg_out = clean_image(src, root / "jpeg-out", [], False)
     with Image.open(jpg_out) as cleaned_jpg:
