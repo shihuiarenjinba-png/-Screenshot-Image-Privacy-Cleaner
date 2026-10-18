@@ -94,6 +94,21 @@ def verify_clean_image(path: Path) -> None:
         raise
 
 
+def verify_redactions(path: Path, rects: list[tuple[int, int, int, int]]) -> None:
+    """Fail closed if a saved lossless output contains pixels in a blacked region."""
+    if not rects:
+        return
+    try:
+        with Image.open(path) as result:
+            pixels = result.convert("RGB")
+            for box in rects:
+                if pixels.crop(box).getbbox() is not None:
+                    raise ValueError("Exported redaction area contains non-black pixels")
+    except Exception:
+        path.unlink(missing_ok=True)
+        raise
+
+
 def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, int]], flatten_png: bool) -> Path:
     ensure_supported(path)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -104,6 +119,10 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
         im = ImageOps.exif_transpose(source)
         if im.mode not in ("RGB", "RGBA"):
             im = im.convert("RGBA" if "A" in im.mode else "RGB")
+        # Lossy JPEG/WEBP can reintroduce visible edge pixels into redacted
+        # regions. Require lossless output before claiming black-area removal.
+        if rects and not flatten_png and path.suffix.lower() in {".jpg", ".jpeg", ".webp"}:
+            raise ValueError("Redactions require lossless PNG output for JPEG/WEBP sources")
         if rects:
             draw = ImageDraw.Draw(im)
             for box in rects:
@@ -124,6 +143,7 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
                 im = im.convert("RGB")
             save_new_image(im, out, "PNG", optimize=True)
             verify_clean_image(out)
+            verify_redactions(out, rects)
             return out
         ext = path.suffix.lower()
         out = output_dir / f"{path.stem}_clean{ext}"
@@ -140,6 +160,7 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
         else:
             save_new_image(im, out, "TIFF", compression="tiff_deflate")
         verify_clean_image(out)
+        verify_redactions(out, rects)
         return out
 
 
