@@ -81,10 +81,25 @@ def save_new_image(image: Image.Image, path: Path, format_name: str, **options) 
         raise
 
 
+def verify_clean_image(path: Path) -> None:
+    """Post-export metadata check. Remove only newly created output if it fails."""
+    try:
+        result = inspect_image(path)
+        if result['gps'] or result['icc']:
+            raise ValueError('Residual GPS or ICC metadata detected in processed image')
+        if path.suffix.lower() not in {'.tif', '.tiff'} and result['exif_tags']:
+            raise ValueError('Residual EXIF tags detected in processed image')
+    except Exception:
+        path.unlink(missing_ok=True)
+        raise
+
+
 def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, int]], flatten_png: bool) -> Path:
     ensure_supported(path)
     output_dir.mkdir(parents=True, exist_ok=True)
     with Image.open(path) as source:
+        if getattr(source, 'n_frames', 1) != 1:
+            raise ValueError('Multi-frame images require manual review; no export created.')
         source.load()
         im = ImageOps.exif_transpose(source)
         if im.mode not in ("RGB", "RGBA"):
@@ -92,6 +107,9 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
         if rects:
             draw = ImageDraw.Draw(im)
             for box in rects:
+                x0, y0, x1, y1 = box
+                if not (0 <= x0 < x1 <= im.width and 0 <= y0 < y1 <= im.height):
+                    raise ValueError('Redaction rectangle extends beyond image or has zero area.')
                 draw.rectangle(box, fill=(0, 0, 0, 255) if im.mode == "RGBA" else (0, 0, 0))
         im.info.clear()
         if flatten_png:
@@ -105,6 +123,7 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
             else:
                 im = im.convert("RGB")
             save_new_image(im, out, "PNG", optimize=True)
+            verify_clean_image(out)
             return out
         ext = path.suffix.lower()
         out = output_dir / f"{path.stem}_clean{ext}"
@@ -115,11 +134,12 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
         elif ext == ".webp":
             save_new_image(im, out, "WEBP", quality=95, method=6)
         elif ext == ".png":
-            im.save(out, format="PNG", optimize=True)
+            save_new_image(im, out, "PNG", optimize=True)
         elif ext == ".bmp":
             save_new_image(im.convert("RGB"), out, "BMP")
         else:
             save_new_image(im, out, "TIFF", compression="tiff_deflate")
+        verify_clean_image(out)
         return out
 
 
