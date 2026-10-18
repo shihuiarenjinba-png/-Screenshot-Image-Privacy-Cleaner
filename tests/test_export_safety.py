@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from PIL import Image
-from windows_app import clean_image, inspect_image
+from windows_app import clean_image, inspect_image, verify_redactions
 
 
 class ExportSafetyTests(unittest.TestCase):
@@ -35,6 +35,20 @@ class ExportSafetyTests(unittest.TestCase):
         self.assertFalse(checked['gps'])
         self.assertFalse(checked['icc'])
         self.assertEqual(checked['exif_tags'], 0)
+
+    def test_lossy_redaction_is_denied_without_png(self):
+        jpeg = self.root / 'photo.jpg'
+        Image.new('RGB', (20, 20), 'white').save(jpeg)
+        with self.assertRaisesRegex(ValueError, 'lossless PNG'):
+            clean_image(jpeg, self.output, [(2, 2, 8, 8)], False)
+        self.assertFalse((self.output / 'photo_clean.jpg').exists())
+
+    def test_post_export_pixel_verification_removes_bad_new_output(self):
+        result = self.output / 'manipulated.png'
+        Image.new('RGB', (20, 20), 'white').save(result)
+        with self.assertRaisesRegex(ValueError, 'non-black'):
+            verify_redactions(result, [(2, 2, 8, 8)])
+        self.assertFalse(result.exists())
 
     def test_new_exif_metadata_not_copied(self):
         exif=Image.Exif()
