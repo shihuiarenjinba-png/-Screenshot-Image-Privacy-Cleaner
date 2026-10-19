@@ -1,0 +1,29 @@
+name: Image privacy safe GUI regression
+on:
+  push:
+    branches:
+      - 'ui/safe-product-upgrade-20261019'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-tests:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install image runtime
+        run: python -m pip install pillow
+      - name: Compile source
+        run: python -m compileall -q windows_app.py i18n.py tests
+      - name: Original image regression
+        run: python smoke_test.py
+      - name: New and existing unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Language consistency
+        run: python bilingual_smoke_test.py
+      - name: Commercial HOLD
+        run: echo "Windows DPI/manual QA, signed MSIX and WACK are NOT VERIFIED."
