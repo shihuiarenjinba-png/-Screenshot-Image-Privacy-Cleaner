@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from math import floor, ceil
 from tkinter import BOTH, END, LEFT, Button, Canvas, Checkbutton, Entry, Frame, IntVar, Label, Listbox, StringVar, Tk, filedialog, messagebox
@@ -14,6 +15,14 @@ def same_path(a: Path, b: Path) -> bool:
         return a.resolve() == b.resolve()
     except OSError:
         return a.absolute() == b.absolute()
+
+
+def image_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def ensure_supported(path: Path) -> None:
@@ -111,6 +120,9 @@ def verify_redactions(path: Path, rects: list[tuple[int, int, int, int]]) -> Non
 
 def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, int]], flatten_png: bool) -> Path:
     ensure_supported(path)
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("Select a regular image file, not a link.")
+    original_digest = image_sha256(path)
     output_dir.mkdir(parents=True, exist_ok=True)
     with Image.open(path) as source:
         if getattr(source, 'n_frames', 1) != 1:
@@ -144,6 +156,9 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
             save_new_image(im, out, "PNG", optimize=True)
             verify_clean_image(out)
             verify_redactions(out, rects)
+            if image_sha256(path) != original_digest:
+                out.unlink(missing_ok=True)
+                raise ValueError("Source image changed during export; the generated copy was removed.")
             return out
         ext = path.suffix.lower()
         out = output_dir / f"{path.stem}_clean{ext}"
@@ -161,6 +176,9 @@ def clean_image(path: Path, output_dir: Path, rects: list[tuple[int, int, int, i
             save_new_image(im, out, "TIFF", compression="tiff_deflate")
         verify_clean_image(out)
         verify_redactions(out, rects)
+        if image_sha256(path) != original_digest:
+            out.unlink(missing_ok=True)
+            raise ValueError("Source image changed during export; the generated copy was removed.")
         return out
 
 
@@ -179,6 +197,8 @@ class App:
         self.original_size = (0, 0)
         self.drag_start = None
         self.drag_id = None
+        self.last_exports: list[Path] = []
+        self.advanced_visible = False
 
         head = Frame(root, padx=12, pady=12)
         head.pack(fill="x")
@@ -191,11 +211,15 @@ class App:
         Button(controls, text="Inspect", width=16, command=self.inspect).pack(side=LEFT, padx=8)
         Button(controls, text="Clean & export", width=18, command=self.export).pack(side=LEFT)
 
-        opts = Frame(root, padx=12, pady=10)
-        opts.pack(fill="x")
-        Label(opts, text="Advanced: manual rectangles apply to all images (x,y,width,height; ...):").pack(anchor="w")
-        Entry(opts, textvariable=self.rect_text).pack(fill="x", pady=(3, 6))
-        Checkbutton(opts, text="Flatten output to metadata-free PNG", variable=self.flatten).pack(anchor="w")
+        safe_opts = Frame(root, padx=12, pady=6)
+        safe_opts.pack(fill="x")
+        Checkbutton(safe_opts, text="Output a new lossless PNG (recommended)", variable=self.flatten).pack(anchor="w")
+        Button(safe_opts, text="Advanced: apply manual coordinates to ALL images",
+               command=self.toggle_advanced).pack(anchor="w")
+        self.advanced = Frame(root, padx=12, pady=6)
+        Label(self.advanced, text="WARNING: these coordinates will black out the same area of EVERY image. "
+              "Leave blank for ordinary per-image mouse selection.").pack(anchor="w")
+        Entry(self.advanced, textvariable=self.rect_text).pack(fill="x", pady=(3, 6))
 
         Label(root, text="Select an image from the list and drag on its preview to mark an area black.").pack(anchor="w", padx=12)
         Button(root, text="Clear regions for selected image", command=self.clear_regions).pack(anchor="w", padx=12)
@@ -207,6 +231,13 @@ class App:
         self.listbox = Listbox(root, font=("Consolas", 10))
         self.listbox.pack(fill=BOTH, expand=True, padx=12, pady=12)
         self.listbox.bind("<<ListboxSelect>>", self.select_image)
+
+    def toggle_advanced(self):
+        self.advanced_visible = not self.advanced_visible
+        if self.advanced_visible:
+            self.advanced.pack(fill="x", before=self.canvas)
+        else:
+            self.advanced.pack_forget()
 
     def add_files(self):
         paths = filedialog.askopenfilenames(title="Select images")
@@ -322,20 +353,33 @@ class App:
         except Exception as exc:
             messagebox.showerror("Invalid rectangles", str(exc))
             return
+        if rects and len(self.files) > 1 and not messagebox.askyesno(
+                "Global redaction affects all images",
+                f"Typed redaction rectangles will be applied to ALL {len(self.files)} images. "
+                "This can hide different content in other images. Continue?"):
+            return
         folder = filedialog.askdirectory(title="Choose output folder")
         if not folder:
             return
         ok, errors = 0, []
+        self.last_exports = []
         for path in self.files:
             try:
                 output = clean_image(path, Path(folder), rects + self.redactions.get(path, []), bool(self.flatten.get()))
                 verified = inspect_image(output)
                 if verified["gps"] or verified["icc"] or (output.suffix.lower() not in {".tif", ".tiff"} and verified["exif_tags"]):
                     raise ValueError("Output metadata check failed; do not share the output.")
+                self.last_exports.append(output)
                 ok += 1
             except Exception as exc:
                 errors.append(f"{path.name}: {exc}")
-        messagebox.showinfo("Image Privacy Cleaner", f"Exported {ok} cleaned image(s)." + ("\n" + "\n".join(errors[:8]) if errors else ""))
+        if errors:
+            messagebox.showwarning("Image Privacy Cleaner: partial/failed",
+                f"Exported {ok} image(s); {len(errors)} failed. Review output before sharing.\n"
+                + "\n".join(errors[:8]))
+        else:
+            messagebox.showinfo("Image Privacy Cleaner",
+                f"Exported {ok} image(s). Open the saved PNG(s) and verify every black area.")
 
 
 def main():
