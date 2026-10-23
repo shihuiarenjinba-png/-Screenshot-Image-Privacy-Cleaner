@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "product_repo": "-Screenshot-Image-Privacy-Cleaner",
+  "owner_confirmed_store_id": "9PNSPFBKBBTQ",
+  "store_id_verification": "OWNER_CONFIRMED_NUMBERS_NOT_LIVE_VERIFIED",
+  "product_title_from_handoff": "Image Privacy Cleaner",
+  "partner_center_reserved_display_name": null,
+  "package_identity_name": null,
+  "package_identity_publisher": null,
+  "publisher_display_name": null,
+  "package_family_name": null,
+  "approved_store_version": null,
+  "package_version_approval": "UNKNOWN",
+  "architecture": "x64",
+  "expected_executable": "ImagePrivacyCleaner.exe",
+  "existing_msix_builder": "store/build-msix.ps1",
+  "brand_assets_approval": "UNKNOWN",
+  "logo_paths": [
+    "store-assets/assets/StoreLogo.png",
+    "store-assets/assets/Square44x44Logo.png",
+    "store-assets/assets/Square150x150Logo.png"
+  ],
+  "store_distribution_only": true,
+  "independent_code_signing": "NOT_REQUESTED_NOT_REQUIRED_FOR_MSIX_STORE_SUBMISSION",
+  "package_generated": "NOT_VERIFIED",
+  "msix_manifest_checked": "NOT_VERIFIED",
+  "partner_center_package_validation": "NOT_VERIFIED",
+  "store_submission": "NOT_AUTHORIZED",
+  "sales_release": "HOLD",
+  "notes": "Do not treat source titles or owner-confirmed ID digits as verified reserved display/identity values. Supply the exact official Partner Center fields and logo source before building. Existing builder remains unchanged; no signing, sideload, or self-certification."
+}
