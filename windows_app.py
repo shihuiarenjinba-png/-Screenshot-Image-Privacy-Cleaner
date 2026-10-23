@@ -186,7 +186,8 @@ class App:
     def __init__(self, root: Tk):
         self.root = root
         self.root.title("Image Privacy Cleaner — Windows")
-        self.root.geometry("940x790")
+        self.root.geometry("940x700")
+        self.root.minsize(820, 620)
         self.files: list[Path] = []
         self.rect_text = StringVar()
         self.flatten = IntVar(value=1)
@@ -223,7 +224,7 @@ class App:
 
         Label(root, text="Select an image from the list and drag on its preview to mark an area black.").pack(anchor="w", padx=12)
         Button(root, text="Clear regions for selected image", command=self.clear_regions).pack(anchor="w", padx=12)
-        self.canvas = Canvas(root, width=860, height=260, bg="#20242b", highlightthickness=0)
+        self.canvas = Canvas(root, width=860, height=230, bg="#20242b", highlightthickness=0)
         self.canvas.pack(fill="x", padx=12, pady=4)
         self.canvas.bind("<ButtonPress-1>", self.drag_begin)
         self.canvas.bind("<B1-Motion>", self.drag_move)
@@ -255,7 +256,7 @@ class App:
     def render_names(self):
         self.listbox.delete(0, END)
         for p in self.files:
-            self.listbox.insert(END, str(p))
+            self.listbox.insert(END, p.name)
 
     def select_image(self, _event):
         selected = self.listbox.curselection()
@@ -274,7 +275,7 @@ class App:
                 source.load()
                 image = ImageOps.exif_transpose(source).convert("RGBA")
                 self.original_size = image.size
-                image.thumbnail((860, 260), Image.Resampling.LANCZOS)
+                image.thumbnail((860, 230), Image.Resampling.LANCZOS)
                 self.preview_size = image.size
                 self.preview_photo = ImageTk.PhotoImage(image)
             self.canvas.create_image(0, 0, image=self.preview_photo, anchor="nw")
