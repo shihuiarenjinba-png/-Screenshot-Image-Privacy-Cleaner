@@ -55,6 +55,10 @@ def _initial_language() -> str:
 _LANGUAGE = _initial_language()
 
 TEXTS: dict[str, tuple[str, str]] = {
+    "Choose images; the list and preview appear next.": ("Choose images; the list and preview appear next.", "画像を選ぶと、一覧とプレビューが表示されます。"),
+    "Checks EXIF/GPS metadata before export.": ("Checks EXIF/GPS metadata before export.", "保存前にEXIF/GPSメタデータを確認します。"),
+    "Keeps originals and creates new cleaned image copies.": ("Keeps originals and creates new cleaned image copies.", "元画像を残し、新しいクリーンな画像コピーを作成します。"),
+    "Remove selected from this list": ("Remove selected from this list", "選択項目を一覧から外す"),
     "Remove selected": ("Remove selected", "選択項目を外す"),
     "1  Add images": ("1  Add images", "1  画像を追加"),
     "2  Inspect": ("2  Inspect", "2  確認"),
