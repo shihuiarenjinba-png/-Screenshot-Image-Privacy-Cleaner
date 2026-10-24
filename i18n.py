@@ -93,6 +93,9 @@ def get_language() -> str:
 def translate(text: object) -> object:
     if not isinstance(text, str):
         return text
+    if "\n" in text:
+        first, rest = text.split("\n", 1)
+        return first + "\n" + str(translate(rest))
     exact = TEXTS.get(text)
     if exact:
         return exact[1] if _LANGUAGE == "ja" else exact[0]
