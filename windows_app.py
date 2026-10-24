@@ -213,10 +213,13 @@ class App:
         controls.pack(fill="x")
         self.add_button = Button(controls, text="1  Add images", width=16, command=self.add_files)
         self.add_button.pack(side=LEFT)
+        Label(controls, text="選ぶと右/下に画像一覧とプレビューを表示", fg="#666666").pack(side=LEFT, padx=(6, 12))
         self.inspect_button = Button(controls, text="2  Inspect", width=16, command=self.inspect)
         self.inspect_button.pack(side=LEFT, padx=8)
+        Label(controls, text="EXIF/GPSなどを確認", fg="#666666").pack(side=LEFT, padx=(0, 12))
         self.export_button = Button(controls, text="3  Save clean copies", width=20, command=self.export)
         self.export_button.pack(side=LEFT)
+        Label(controls, text="元画像を残して新しいコピーを保存", fg="#666666").pack(side=LEFT, padx=(6, 0))
         self.remove_button = Button(controls, text="Remove selected", width=17, command=self.remove_selected)
         self.remove_button.pack(side=LEFT, padx=(8, 0))
 
