@@ -393,4 +393,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if "--self-test" in sys.argv:
+        # Runs the same safe file-processing smoke cases inside the bundled EXE.
+        import smoke_test  # noqa: F401
+    else:
+        main()
