@@ -26,6 +26,12 @@ class I18nUiContractTests(unittest.TestCase):
         self.assertIn("install_bilingual_ui", ui)
         self.assertIn("Language / 言語", helper)
 
+    def test_command_bar_icon_label_switches_language(self):
+        i18n.set_language("en")
+        self.assertEqual(i18n.translate("＋\nAdd images"), "＋\nAdd images")
+        i18n.set_language("ja")
+        self.assertEqual(i18n.translate("＋\nAdd images"), "＋\n画像を追加")
+
 
 if __name__ == "__main__":
     unittest.main()
