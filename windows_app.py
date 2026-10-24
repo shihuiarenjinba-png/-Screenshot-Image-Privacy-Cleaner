@@ -209,9 +209,9 @@ class App:
 
         controls = Frame(root, padx=12)
         controls.pack(fill="x")
-        Button(controls, text="Add images", width=16, command=self.add_files).pack(side=LEFT)
-        Button(controls, text="Inspect", width=16, command=self.inspect).pack(side=LEFT, padx=8)
-        Button(controls, text="Clean & export", width=18, command=self.export).pack(side=LEFT)
+        Button(controls, text="1  Add images", width=16, command=self.add_files).pack(side=LEFT)
+        Button(controls, text="2  Inspect", width=16, command=self.inspect).pack(side=LEFT, padx=8)
+        Button(controls, text="3  Save clean copies", width=20, command=self.export).pack(side=LEFT)
 
         safe_opts = Frame(root, padx=12, pady=6)
         safe_opts.pack(fill="x")
