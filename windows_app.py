@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+from ui_desktop import bind_shortcuts, restore_window_state, save_window_state
 from math import floor, ceil
 from tkinter import BOTH, END, LEFT, Button, Canvas, Checkbutton, Entry, Frame, IntVar, Label, Listbox, StringVar, Tk, filedialog, messagebox
 
@@ -188,6 +189,7 @@ class App:
         self.root.title("Image Privacy Cleaner — Windows")
         self.root.geometry("940x700")
         self.root.minsize(820, 620)
+        restore_window_state(self.root, "ImagePrivacyCleaner", min_width=820, min_height=620)
         self.files: list[Path] = []
         self.rect_text = StringVar()
         self.flatten = IntVar(value=1)
@@ -209,9 +211,14 @@ class App:
 
         controls = Frame(root, padx=12)
         controls.pack(fill="x")
-        Button(controls, text="1  Add images", width=16, command=self.add_files).pack(side=LEFT)
-        Button(controls, text="2  Inspect", width=16, command=self.inspect).pack(side=LEFT, padx=8)
-        Button(controls, text="3  Save clean copies", width=20, command=self.export).pack(side=LEFT)
+        self.add_button = Button(controls, text="1  Add images", width=16, command=self.add_files)
+        self.add_button.pack(side=LEFT)
+        self.inspect_button = Button(controls, text="2  Inspect", width=16, command=self.inspect)
+        self.inspect_button.pack(side=LEFT, padx=8)
+        self.export_button = Button(controls, text="3  Save clean copies", width=20, command=self.export)
+        self.export_button.pack(side=LEFT)
+        self.remove_button = Button(controls, text="Remove selected", width=17, command=self.remove_selected)
+        self.remove_button.pack(side=LEFT, padx=(8, 0))
 
         safe_opts = Frame(root, padx=12, pady=6)
         safe_opts.pack(fill="x")
@@ -233,6 +240,44 @@ class App:
         self.listbox = Listbox(root, font=("Consolas", 10))
         self.listbox.pack(fill=BOTH, expand=True, padx=12, pady=12)
         self.listbox.bind("<<ListboxSelect>>", self.select_image)
+        bind_shortcuts(self.root, {
+            "<Control-O>": self.add_files,
+            "<F5>": self.inspect,
+            "<Control-S>": self.export,
+            "<Delete>": self.remove_selected,
+        })
+        self.root.protocol("WM_DELETE_WINDOW", self._close)
+        self._refresh_actions()
+
+    def _refresh_actions(self):
+        has_files = bool(self.files)
+        has_selection = bool(self.listbox.curselection())
+        self.inspect_button.configure(state="normal" if has_files else "disabled")
+        self.export_button.configure(state="normal" if has_files else "disabled")
+        self.remove_button.configure(state="normal" if has_selection else "disabled")
+
+    def _close(self):
+        save_window_state(self.root, "ImagePrivacyCleaner")
+        self.root.destroy()
+
+    def remove_selected(self):
+        selected = sorted(self.listbox.curselection(), reverse=True)
+        if not selected:
+            return
+        removed = []
+        for index in selected:
+            if index < len(self.files):
+                removed.append(self.files.pop(index))
+        for path in removed:
+            self.redactions.pop(path, None)
+        self.current_preview = None
+        self.preview_photo = None
+        self.canvas.delete("all")
+        self.render_names()
+        if self.files:
+            self.listbox.selection_set(0)
+            self.show_preview(self.files[0])
+        self._refresh_actions()
 
     def toggle_advanced(self):
         self.advanced_visible = not self.advanced_visible
@@ -252,7 +297,10 @@ class App:
                 self.files.append(path)
         self.render_names()
         if self.files:
+            self.listbox.selection_clear(0, END)
+            self.listbox.selection_set(0)
             self.show_preview(self.files[0])
+        self._refresh_actions()
 
     def render_names(self):
         self.listbox.delete(0, END)
@@ -263,6 +311,7 @@ class App:
         selected = self.listbox.curselection()
         if selected and selected[0] < len(self.files):
             self.show_preview(self.files[selected[0]])
+        self._refresh_actions()
 
     def show_preview(self, path):
         self.current_preview = path
