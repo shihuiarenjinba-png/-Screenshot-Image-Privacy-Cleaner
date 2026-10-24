@@ -57,7 +57,13 @@ if ($null -ne $MakeAppxCommand) {
     $Found = @()
     if (Test-Path -LiteralPath $Kits) {
         $Found = @(Get-ChildItem -LiteralPath $Kits -Recurse -File -Filter 'MakeAppx.exe' -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -match '\\x64\\MakeAppx[.]exe$Output = Join-Path $Root 'dist-store'
+            Where-Object { $_.FullName -like '*\x64\MakeAppx.exe' } |
+            Sort-Object FullName -Descending)
+    }
+    if ($Found.Count -eq 0) { throw 'Windows SDK MakeAppx.exe was not found.' }
+    $MakeAppxPath = $Found[0].FullName
+}
+$Output = Join-Path $Root 'dist-store'
 $PackagePath = Join-Path $Output ("ImagePrivacyCleaner_QA_UNSIGNED_" + $Version + '_x64.msix')
 if (Test-Path -LiteralPath $PackagePath) { throw 'Existing MSIX cannot be replaced; increment version and QA it.' }
 $Stage = Join-Path $env:TEMP ('ImagePrivacyCleaner-stage-' + [guid]::NewGuid().ToString('N'))
