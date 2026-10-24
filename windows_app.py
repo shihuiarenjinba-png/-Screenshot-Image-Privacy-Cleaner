@@ -217,6 +217,7 @@ class App:
         self.remove_button = self.command_bar.add_command("remove", "✕", "Remove", self.remove_selected, enabled=False)
         self.command_bar.add_separator()
         self.command_bar.add_command("clear_regions", "□", "Clear marks", self.clear_regions)
+        self.command_bar.add_command("advanced", "⚙", "Advanced", self.toggle_advanced)
         self.export_button = self.command_bar.add_command("save", "▣", "Save copies", self.export, enabled=False)
         self.command_bar.add_spacer()
         Label(root, text="Add images → select a thumbnail/list item → inspect or drag on the preview to redact → Save copies.",
@@ -225,15 +226,12 @@ class App:
         safe_opts = Frame(root, padx=12, pady=6)
         safe_opts.pack(fill="x")
         Checkbutton(safe_opts, text="Output a new lossless PNG (recommended)", variable=self.flatten).pack(anchor="w")
-        Button(safe_opts, text="Advanced: apply manual coordinates to ALL images",
-               command=self.toggle_advanced).pack(anchor="w")
         self.advanced = Frame(root, padx=12, pady=6)
         Label(self.advanced, text="WARNING: these coordinates will black out the same area of EVERY image. "
               "Leave blank for ordinary per-image mouse selection.").pack(anchor="w")
         Entry(self.advanced, textvariable=self.rect_text).pack(fill="x", pady=(3, 6))
 
         Label(root, text="Select an image from the list and drag on its preview to mark an area black.").pack(anchor="w", padx=12)
-        Button(root, text="Clear regions for selected image", command=self.clear_regions).pack(anchor="w", padx=12)
         self.canvas = Canvas(root, width=860, height=230, bg="#20242b", highlightthickness=0)
         self.canvas.pack(fill="x", padx=12, pady=4)
         self.canvas.bind("<ButtonPress-1>", self.drag_begin)
