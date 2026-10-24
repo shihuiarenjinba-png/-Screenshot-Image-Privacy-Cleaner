@@ -54,7 +54,7 @@ if ($null -eq $MakeAppx) {
     throw 'MakeAppx.exe not on PATH. Install Windows SDK and use its x64 bin folder.'
 }
 $Output = Join-Path $Root 'dist-store'
-$PackagePath = Join-Path $Output ("ImagePrivacyCleaner_" + $Version + '_x64.msix')
+$PackagePath = Join-Path $Output ("ImagePrivacyCleaner_QA_UNSIGNED_" + $Version + '_x64.msix')
 if (Test-Path -LiteralPath $PackagePath) { throw 'Existing MSIX cannot be replaced; increment version and QA it.' }
 $Stage = Join-Path $env:TEMP ('ImagePrivacyCleaner-stage-' + [guid]::NewGuid().ToString('N'))
 $Roundtrip = Join-Path $env:TEMP ('ImagePrivacyCleaner-verify-' + [guid]::NewGuid().ToString('N'))
@@ -153,7 +153,7 @@ try {
     $UnpackedHash = (Get-FileHash -LiteralPath (Join-Path $Roundtrip $AppExe) -Algorithm SHA256).Hash
     if ($OriginalHash -ne $UnpackedHash) { throw 'MSIX executable digest mismatch.' }
     $MsixHash = (Get-FileHash -LiteralPath $PackagePath -Algorithm SHA256).Hash
-    Write-Host "STORE CANDIDATE ONLY: $PackagePath"
+    Write-Host "QA_UNSIGNED / NOT CERTIFIED: $PackagePath"
     Write-Host "MSIX SHA256: $MsixHash"
     Write-Host "SOURCE SHA: $SourceSha"
     Write-Host 'MANIFEST IDENTITY MATCH: PASS'
