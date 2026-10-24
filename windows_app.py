@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 from ui_desktop import bind_shortcuts, restore_window_state, save_window_state
+from ui_commandbar import CommandBar
 from math import floor, ceil
 from tkinter import BOTH, END, LEFT, Button, Canvas, Checkbutton, Entry, Frame, IntVar, Label, Listbox, StringVar, Tk, filedialog, messagebox
 
@@ -209,28 +210,17 @@ class App:
         Label(head, text="Strip EXIF/GPS metadata and optionally black-redact regions. Processing stays local.").pack(anchor="w")
         Label(head, text="① Add images  →  ② Inspect metadata  →  ③ Mark redactions if needed  →  ④ Save clean copies", font=("Segoe UI", 10, "bold"), wraplength=860, justify=LEFT).pack(anchor="w", pady=(4, 0))
 
-        controls = Frame(root, padx=12)
-        controls.pack(fill="x")
-        add_card = Frame(controls, padx=6, pady=4)
-        add_card.pack(side=LEFT, fill="x", expand=True)
-        self.add_button = Button(add_card, text="1  Add images", width=16, command=self.add_files)
-        self.add_button.pack(anchor="w")
-        Label(add_card, text="Choose images; the list and preview appear next.", fg="#666666",
-              wraplength=220, justify=LEFT).pack(anchor="w", pady=(3, 0))
-        inspect_card = Frame(controls, padx=6, pady=4)
-        inspect_card.pack(side=LEFT, fill="x", expand=True)
-        self.inspect_button = Button(inspect_card, text="2  Inspect", width=16, command=self.inspect)
-        self.inspect_button.pack(anchor="w")
-        Label(inspect_card, text="Checks EXIF/GPS metadata before export.", fg="#666666",
-              wraplength=210, justify=LEFT).pack(anchor="w", pady=(3, 0))
-        save_card = Frame(controls, padx=6, pady=4)
-        save_card.pack(side=LEFT, fill="x", expand=True)
-        self.export_button = Button(save_card, text="3  Save clean copies", width=20, command=self.export)
-        self.export_button.pack(anchor="w")
-        Label(save_card, text="Keeps originals and creates new cleaned image copies.", fg="#666666",
-              wraplength=230, justify=LEFT).pack(anchor="w", pady=(3, 0))
-        self.remove_button = Button(root, text="Remove selected from this list", width=26, command=self.remove_selected)
-        self.remove_button.pack(anchor="w", padx=18, pady=(2, 0))
+        self.command_bar = CommandBar(root)
+        self.command_bar.pack(fill="x", padx=12, pady=(0, 6))
+        self.add_button = self.command_bar.add_command("add", "＋", "Add images", self.add_files, primary=True)
+        self.inspect_button = self.command_bar.add_command("inspect", "◉", "Inspect", self.inspect, enabled=False)
+        self.remove_button = self.command_bar.add_command("remove", "✕", "Remove", self.remove_selected, enabled=False)
+        self.command_bar.add_separator()
+        self.command_bar.add_command("clear_regions", "□", "Clear marks", self.clear_regions)
+        self.export_button = self.command_bar.add_command("save", "▣", "Save copies", self.export, enabled=False)
+        self.command_bar.add_spacer()
+        Label(root, text="Add images → select a thumbnail/list item → inspect or drag on the preview to redact → Save copies.",
+              fg="#56616f", anchor="w").pack(fill="x", padx=18, pady=(0, 6))
 
         safe_opts = Frame(root, padx=12, pady=6)
         safe_opts.pack(fill="x")
