@@ -137,15 +137,22 @@ try {
     $Ns.AddNamespace('uap','http://schemas.microsoft.com/appx/manifest/uap/windows10')
     $IdNode = $RoundtripManifest.SelectSingleNode('/f:Package/f:Identity',$Ns)
     $PropsNode = $RoundtripManifest.SelectSingleNode('/f:Package/f:Properties',$Ns)
+    $DependencyNode = $RoundtripManifest.SelectSingleNode('/f:Package/f:Dependencies/f:TargetDeviceFamily',$Ns)
+    $ApplicationNode = $RoundtripManifest.SelectSingleNode('/f:Package/f:Applications/f:Application',$Ns)
     $VisualNode = $RoundtripManifest.SelectSingleNode('/f:Package/f:Applications/f:Application/uap:VisualElements',$Ns)
     $DisplayNode = if ($null -ne $PropsNode) { $PropsNode.SelectSingleNode('f:DisplayName',$Ns) } else { $null }
     $PublisherNode = if ($null -ne $PropsNode) { $PropsNode.SelectSingleNode('f:PublisherDisplayName',$Ns) } else { $null }
-    if ($null -eq $IdNode -or $null -eq $DisplayNode -or $null -eq $PublisherNode -or $null -eq $VisualNode -or
+    if ($null -eq $IdNode -or $null -eq $DisplayNode -or $null -eq $PublisherNode -or
+        $null -eq $DependencyNode -or $null -eq $ApplicationNode -or $null -eq $VisualNode -or
         $IdNode.GetAttribute('Name') -cne $IdentityName -or $IdNode.GetAttribute('Publisher') -cne $Publisher -or
         $IdNode.GetAttribute('Version') -cne $Version -or $IdNode.GetAttribute('ProcessorArchitecture') -cne 'x64' -or
         $DisplayNode.InnerText -cne $DisplayName -or $PublisherNode.InnerText -cne $PublisherDisplayName -or
+        $DependencyNode.GetAttribute('Name') -cne 'Windows.Desktop' -or
+        $DependencyNode.GetAttribute('MinVersion') -cne '10.0.19041.0' -or
+        $ApplicationNode.GetAttribute('Id') -cne 'App' -or
+        $ApplicationNode.GetAttribute('Executable') -cne $AppExe -or
         $VisualNode.GetAttribute('DisplayName') -cne $DisplayName) {
-        throw 'Unpacked MSIX manifest does not match the requested Store identity.'
+        throw 'Unpacked MSIX manifest does not match the requested Store identity and entry point.'
     }
     $EmbeddedSource = (Get-Content -LiteralPath (Join-Path $Roundtrip 'SOURCE_GIT_COMMIT.txt') -Raw -Encoding ASCII).Trim()
     if ($EmbeddedSource -cne $SourceSha) { throw 'Embedded source commit does not match build HEAD.' }
