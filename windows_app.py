@@ -205,6 +205,7 @@ class App:
         head.pack(fill="x")
         Label(head, text="Image Privacy Cleaner", font=("Segoe UI", 20, "bold")).pack(anchor="w")
         Label(head, text="Strip EXIF/GPS metadata and optionally black-redact regions. Processing stays local.").pack(anchor="w")
+        Label(head, text="① Add images  →  ② Inspect metadata  →  ③ Mark redactions if needed  →  ④ Save clean copies", font=("Segoe UI", 10, "bold"), wraplength=860, justify=LEFT).pack(anchor="w", pady=(4, 0))
 
         controls = Frame(root, padx=12)
         controls.pack(fill="x")
