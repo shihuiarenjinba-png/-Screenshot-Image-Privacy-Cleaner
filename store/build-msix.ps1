@@ -42,7 +42,7 @@ if ($Publisher -notmatch '^CN=.+$' -or $Publisher -match '(?i)(placeholder|examp
     throw 'Publisher/PublisherDisplayName/DisplayName must match the real Partner Center record.'
 }
 $fields = $Version.Split('.')
-if ([int]$fields[0] -lt 1 -or ($fields | Where-Object { [long]$_ -gt 65535 }).Count -gt 0) {
+if ([int]$fields[0] -lt 1 -or @($fields | Where-Object { [long]$_ -gt 65535 }).Count -gt 0) {
     throw 'Invalid MSIX version; each field <=65535, major >=1, and the last component = 0.'
 }
 if (-not (Test-Path -LiteralPath $ExePath -PathType Leaf)) { throw "Missing EXE: $ExePath" }
